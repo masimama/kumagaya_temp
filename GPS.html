@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>熊谷市温度マップ</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+        }
+        #map {
+            height: 100vh;
+            width: 100%;
+        }
+        #loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 5px;
+        }
+        .info {
+            padding: 6px 8px;
+            font: 14px/16px Arial, Helvetica, sans-serif;
+            background: white;
+            background: rgba(255,255,255,0.8);
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+            border-radius: 5px;
+        }
+        .info h4 {
+            margin: 0 0 5px;
+            color: #777;
+        }
+        .legend {
+            line-height: 18px;
+            color: #555;
+        }
+        .legend canvas {
+            width: 100%;
+            height: auto;
+        }
+        #location-info {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 1000;
+            background-color: white;
+            padding: 5px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        @media (max-width: 600px) {
+            .info.legend {
+                font-size: 10px;
+            }
+            #map {
+                height: 80vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="loading">Loading...</div>
+    <div id="location-info">位置情報: 取得中...</div>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/geotiff"></script>
+    <script>
+        var map = L.map('map', {
+            tap: true
+        }).setView([36.1406, 139.3881], 10);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        document.getElementById('loading').style.display = 'block';
+
+        function tempToColor(temp, minTemp, maxTemp) {
+            const normalizedTemp = (temp - minTemp) / (maxTemp - minTemp);
+            const r = Math.round(normalizedTemp * 255);
+            const b = Math.round((1 - normalizedTemp) * 255);
+            return [r, 0, b];
+        }
+
+        // GPS位置情報の取得と表示
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition(showPosition, showError);
+            } else {
+                document.getElementById("location-info").innerHTML = "このブラウザはGeolocationをサポートしていません。";
+            }
+        }
+
+        function showPosition(position) {
+            var lat = position.coords.latitude;
+            var lon = position.coords.longitude;
+            document.getElementById("location-info").innerHTML = "緯度: " + lat.toFixed(4) + "<br>経度: " + lon.toFixed(4);
+            
+            // 現在位置にマーカーを表示
+            L.marker([lat, lon]).addTo(map)
+                .bindPopup('現在地').openPopup();
+
+            // 現在位置に地図の中心を移動
+            map.setView([lat, lon], 15);
+        }
+
+        function showError(error) {
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    document.getElementById("location-info").innerHTML = "ユーザーが位置情報の使用を拒否しました。";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    document.getElementById("location-info").innerHTML = "位置情報が利用できません。";
+                    break;
+                case error.TIMEOUT:
+                    document.getElementById("location-info").innerHTML = "位置情報の取得がタイムアウトしました。";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    document.getElementById("location-info").innerHTML = "不明なエラーが発生しました。";
+                    break;
+            }
+        }
+
+        // 位置情報の取得を開始
+        getLocation();
+
+        GeoTIFF.fromUrl('https://raw.githubusercontent.com/masimama/kumagaya_temp/main/202407102100_temp.tif')
+            .then(tiff => tiff.getImage())
+            .then(image => {
+                const bbox = image.getBoundingBox();
+                return image.readRasters().then(data => [bbox, data, image]);
+            })
+            .then(([bbox, data, image]) => {
+                return new Promise(resolve => {
+                    setTimeout(() => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = image.getWidth();
+                        canvas.height = image.getHeight();
+                        const ctx = canvas.getContext('2d');
+                        const imageData = ctx.createImageData(canvas.width, canvas.height);
+                        const rgba = imageData.data;
+
+                        const temperatures = data[0];
+                        const minTemp = Math.min(...temperatures);
+                        const maxTemp = Math.max(...temperatures);
+
+                        for (let i = 0; i < temperatures.length; i++) {
+                            const [r, g, b] = tempToColor(temperatures[i], minTemp, maxTemp);
+                            rgba[i * 4] = r;
+                            rgba[i * 4 + 1] = g;
+                            rgba[i * 4 + 2] = b;
+                            rgba[i * 4 + 3] = 255;
+                        }
+
+                        ctx.putImageData(imageData, 0, 0);
+                        resolve([canvas, bbox, minTemp, maxTemp]);
+                    }, 0);
+                });
+            })
+            .then(([canvas, bbox, minTemp, maxTemp]) => {
+                L.imageOverlay(canvas.toDataURL(), [[bbox[1], bbox[0]], [bbox[3], bbox[2]]], {
+                    opacity: 0.7
+                }).addTo(map);
+
+                map.fitBounds([[bbox[1], bbox[0]], [bbox[3], bbox[2]]]);
+                addLegend(map, minTemp, maxTemp);
+                document.getElementById('loading').style.display = 'none';
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('loading').style.display = 'none';
+                alert('データの読み込みに失敗しました。');
+            });
+
+        function addLegend(map, minTemp, maxTemp) {
+            const legend = L.control({position: 'bottomleft'});
+            legend.onAdd = function(map) {
+                const div = L.DomUtil.create('div', 'info legend');
+                div.innerHTML = '<h4>温度 (°C)</h4>';
+                const canvas = createTemperatureColorband(minTemp, maxTemp);
+                div.appendChild(canvas);
+                return div;
+            };
+            legend.addTo(map);
+        }
+
+        function createTemperatureColorband(minTemp, maxTemp) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 50;
+            const ctx = canvas.getContext('2d');
+
+            const gradient = ctx.createLinearGradient(0, 0, 256, 0);
+            for (let i = 0; i <= 256; i++) {
+                const temp = minTemp + (maxTemp - minTemp) * (i / 256);
+                const [r, g, b] = tempToColor(temp, minTemp, maxTemp);
+                gradient.addColorStop(i / 256, `rgb(${r},${g},${b})`);
+            }
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 256, 20);
+
+            ctx.fillStyle = 'black';
+            ctx.font = '12px Arial';
+            
+            ctx.beginPath();
+            ctx.moveTo(0, 20);
+            ctx.lineTo(10, 30);
+            ctx.lineTo(0, 40);
+            ctx.fill();
+            ctx.fillText(`${minTemp.toFixed(1)}°C`, 15, 35);
+
+            ctx.beginPath();
+            ctx.moveTo(256, 20);
+            ctx.lineTo(246, 30);
+            ctx.lineTo(256, 40);
+            ctx.fill();
+            ctx.fillText(`${maxTemp.toFixed(1)}°C`, 216, 35);
+
+            return canvas;
+        }
+    </script>
+</body>
+</html>
