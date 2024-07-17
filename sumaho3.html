@@ -33,10 +33,9 @@
             padding: 10px; 
             border-radius: 5px; 
         }
-        #debug { position: absolute; bottom: 10px; left: 10px; z-index: 1000; background: white; padding: 5px; border-radius: 5px; }
         @media (max-width: 600px) {
             #map { height: 80vh; }
-            #info, #getLocationBtn, #cancelLocationBtn, #debug {
+            #info, #getLocationBtn, #cancelLocationBtn {
                 font-size: 14px;
                 padding: 3px;
             }
@@ -50,7 +49,6 @@
     <div id="loading">Loading...</div>
     <button id="getLocationBtn">現在地を取得</button>
     <button id="cancelLocationBtn">位置情報の取得をキャンセル</button>
-    <div id="debug"></div>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/geotiff"></script>
     <script>
@@ -67,21 +65,21 @@
         let temperatureData;
         let watchId = null;
 
-        function debugLog(message) {
+        function debugLog(message, isError = false) {
             console.log(message);
-            document.getElementById('debug').innerHTML += message + '<br>';
+            if (isError) {
+                alert(`エラー: ${message}`);
+            }
         }
 
         async function loadGeoTIFF() {
             document.getElementById('loading').style.display = 'block';
-            debugLog('Loading GeoTIFF...');
             try {
                 const response = await fetch(geoTiffUrl);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const arrayBuffer = await response.arrayBuffer();
-                debugLog('GeoTIFF data fetched');
                 const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
                 const image = await tiff.getImage();
                 const bbox = image.getBoundingBox();
@@ -95,21 +93,16 @@
                     height: image.getHeight()
                 };
 
-                debugLog('GeoTIFF loaded successfully');
-                debugLog(`Temperature data: min=${Math.min(...temperatures)}, max=${Math.max(...temperatures)}`);
-
                 displayTemperatureMap();
             } catch (error) {
                 console.error('Error loading GeoTIFF:', error);
-                debugLog(`Error loading GeoTIFF: ${error.message}`);
-                alert('温度データの読み込みに失敗しました。ネットワーク接続を確認し、ページをリロードしてください。');
+                debugLog(`温度データの読み込みに失敗しました: ${error.message}`, true);
             } finally {
                 document.getElementById('loading').style.display = 'none';
             }
         }
 
         function displayTemperatureMap() {
-            debugLog('Displaying temperature map...');
             const {bbox, temperatures, width, height} = temperatureData;
             const canvas = document.createElement('canvas');
             canvas.width = width;
@@ -133,7 +126,6 @@
             L.imageOverlay(canvas.toDataURL(), [[bbox[1], bbox[0]], [bbox[3], bbox[2]]], {opacity: 0.7}).addTo(map);
             map.fitBounds([[bbox[1], bbox[0]], [bbox[3], bbox[2]]]);
             addLegend(minTemp, maxTemp);
-            debugLog('Temperature map displayed');
         }
 
         function tempToColor(temp, min, max) {
@@ -149,18 +141,17 @@
                 return div;
             };
             legend.addTo(map);
-            debugLog('Legend added');
         }
 
         function getLocation() {
             if (navigator.geolocation) {
                 document.getElementById('getLocationBtn').style.display = 'none';
                 document.getElementById('cancelLocationBtn').style.display = 'block';
+                document.getElementById("info").innerHTML = "位置情報: 取得中...";
                 watchId = navigator.geolocation.watchPosition(showPosition, showError);
-                debugLog('Requesting location...');
             } else {
                 document.getElementById("info").innerHTML = "Geolocationはサポートされていません";
-                debugLog('Geolocation not supported');
+                debugLog("Geolocationはサポートされていません", true);
             }
         }
 
@@ -176,7 +167,6 @@
                 .bindPopup(`現在地<br>気温: ${temp ? temp.toFixed(1) + '°C' : '取得中...'}`).openPopup();
             
             map.setView([lat, lon], 15);
-            debugLog(`Position updated: lat=${lat}, lon=${lon}, temp=${temp}`);
         }
 
         function showError(error) {
@@ -187,7 +177,7 @@
                 0: "不明なエラーが発生しました"
             };
             document.getElementById("info").innerHTML = messages[error.code] || messages[0];
-            debugLog(`Geolocation error: ${messages[error.code] || messages[0]}`);
+            debugLog(`位置情報エラー: ${messages[error.code] || messages[0]}`, true);
             cancelLocationTracking();
         }
 
@@ -206,7 +196,6 @@
                 document.getElementById("info").innerHTML = "位置情報の取得をキャンセルしました";
                 document.getElementById('getLocationBtn').style.display = 'block';
                 document.getElementById('cancelLocationBtn').style.display = 'none';
-                debugLog('Location tracking cancelled');
             }
         }
 
@@ -214,7 +203,6 @@
         document.getElementById('cancelLocationBtn').addEventListener('click', cancelLocationTracking);
 
         loadGeoTIFF();
-        debugLog('Script initialized');
     </script>
 </body>
 </html>
