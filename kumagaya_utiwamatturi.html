@@ -239,7 +239,7 @@
             if (navigator.geolocation) {
                 document.getElementById('loading').style.display = 'block';
                 watchId = navigator.geolocation.watchPosition(
-                    function(position) {
+                    async function(position) {
                         const lat = position.coords.latitude;
                         const lng = position.coords.longitude;
                         const locationInfo = `緯度: ${lat.toFixed(4)}, 経度: ${lng.toFixed(4)}`;
@@ -252,6 +252,14 @@
 
                         locationMarker = L.marker([lat, lng]).addTo(map);
                         map.setView([lat, lng], 18); // ズームアップ
+
+                        // Get temperature at the clicked location
+                        const temperature = await getTemperatureAtLocation(lat, lng);
+                        if (temperature !== null) {
+                            locationMarker.bindPopup(`気温: ${temperature.toFixed(1)}°C`).openPopup();
+                        } else {
+                            locationMarker.bindPopup(`気温情報はありません`).openPopup();
+                        }
 
                     },
                     function(error) {
@@ -282,6 +290,18 @@
                 }
             }
         });
+
+        async function getTemperatureAtLocation(latitude, longitude) {
+            if (!temperatureData) return null;
+
+            const { bbox, temperatures, width, height } = temperatureData;
+            const i = Math.floor((latitude - bbox[1]) / ((bbox[3] - bbox[1]) / height));
+            const j = Math.floor((longitude - bbox[0]) / ((bbox[2] - bbox[0]) / width));
+            const index = i * width + j;
+            if (index < 0 || index >= temperatures.length) return null;
+
+            return temperatures[index];
+        }
 
         loadGeoTIFF();
     </script>
