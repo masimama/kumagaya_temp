@@ -64,7 +64,6 @@
     <div id="loading">Loading...<br><progress id="loadingProgress" value="0" max="100"></progress></div>
     <button id="getLocationBtn">現在地を取得</button>
     <button id="cancelLocationBtn">位置情報の取得をキャンセル</button>
-    <div id="legend"></div>
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/geotiff"></script>
     <script>
@@ -80,6 +79,7 @@
         const geoTiffUrl = 'https://raw.githubusercontent.com/masimama/kumagaya_temp/main/071415_10mesh.tif';
         let temperatureData;
         let watchId = null;
+        let locationMarker = null;
 
         async function loadGeoTIFF() {
             document.getElementById('loading').style.display = 'block';
@@ -225,15 +225,63 @@
                 div.innerHTML += `<span style="float: left; color: rgb(${tempToColor(min, min, max).join(',')}">${min.toFixed(1)}°C</span><span style="float: right; color: rgb(${tempToColor(max, min, max).join(',')}">${max.toFixed(1)}°C</span>`;
 
                 // Overall temperature color bar
-        div.innerHTML += '<br><br><strong>全体の気温カラー</strong><br>';
-        div.innerHTML += '<div class="overall-legend-gradient" style="background: linear-gradient(to right, rgb(0, 0, 255), rgb(0, 255, 0), rgb(255, 255, 0), rgb(255, 0, 0), rgb(255, 0, 255), rgb(0, 0, 0)); height: 10px; width: 100%;"></div>';
-        div.innerHTML += `<span style="float: left;">~20°C</span><span style="float: right;">30°C~</span>`;
+                div.innerHTML += '<br><br><strong>全体の気温カラー</strong><br>';
+                div.innerHTML += '<div class="overall-legend-gradient" style="background: linear-gradient(to right, rgb(0, 0, 255), rgb(0, 255, 0), rgb(255, 255, 0), rgb(255, 0, 0), rgb(255, 0, 255), rgb(0, 0, 0)); height: 10px; width: 100%;"></div>';
+                div.innerHTML += `<span style="float: left;">~20°C</span><span style="float: right;">30°C~</span>`;
 
                 return div;
             };
 
             legend.addTo(map);
         }
+
+        document.getElementById('getLocationBtn').addEventListener('click', function() {
+            if (navigator.geolocation) {
+                document.getElementById('loading').style.display = 'block';
+                watchId = navigator.geolocation.watchPosition(
+                    function(position) {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
+                        const locationInfo = `緯度: ${lat.toFixed(4)}, 経度: ${lng.toFixed(4)}`;
+                        document.getElementById('info').textContent = locationInfo;
+                        document.getElementById('loading').style.display = 'none';
+                        
+                        if (locationMarker) {
+                            map.removeLayer(locationMarker);
+                        }
+
+                        locationMarker = L.marker([lat, lng]).addTo(map);
+                        map.setView([lat, lng], 18); // ズームアップ
+
+                    },
+                    function(error) {
+                        alert('位置情報の取得に失敗しました: ' + error.message);
+                        document.getElementById('loading').style.display = 'none';
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 5000,
+                        maximumAge: 0
+                    }
+                );
+                document.getElementById('cancelLocationBtn').style.display = 'block';
+            } else {
+                alert('このブラウザでは位置情報がサポートされていません。');
+            }
+        });
+
+        document.getElementById('cancelLocationBtn').addEventListener('click', function() {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+                document.getElementById('info').textContent = '位置情報: 未取得';
+                document.getElementById('cancelLocationBtn').style.display = 'none';
+                if (locationMarker) {
+                    map.removeLayer(locationMarker);
+                    locationMarker = null;
+                }
+            }
+        });
 
         loadGeoTIFF();
     </script>
