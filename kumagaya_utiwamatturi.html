@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>熊谷市温度マップ</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        body { padding: 0; margin: 0; font-family: Arial, sans-serif; }
+        #map { height: 100vh; width: 100%; }
+        #info { position: absolute; top: 10px; left: 10px; z-index: 1000; background: white; padding: 10px; border-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .legend { padding: 6px 8px; background: rgba(255,255,255,0.9); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; width: 300px; }
+        .legend i { width: 20px; height: 20px; display: inline-block; }
+        #getLocationBtn, #cancelLocationBtn { 
+            position: absolute; 
+            left: 10px; 
+            z-index: 1000; 
+            padding: 10px; 
+            border-radius: 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        #getLocationBtn:hover, #cancelLocationBtn:hover {
+            background-color: #45a049;
+        }
+        #getLocationBtn { top: 60px; }
+        #cancelLocationBtn { top: 110px; display: none; }
+        #loading { 
+            display: none; 
+            position: absolute; 
+            top: 50%; 
+            left: 50%; 
+            transform: translate(-50%, -50%); 
+            z-index: 1000; 
+            background-color: rgba(255, 255, 255, 0.9); 
+            padding: 20px; 
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+        #loadingProgress {
+            width: 100%;
+            margin-top: 10px;
+        }
+        @media (max-width: 600px) {
+            #map { height: 80vh; }
+            #info, #getLocationBtn, #cancelLocationBtn {
+                font-size: 14px;
+                padding: 8px;
+            }
+            .legend { font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="info">位置情報: 未取得</div>
+    <div id="loading">Loading...<br><progress id="loadingProgress" value="0" max="100"></progress></div>
+    <button id="getLocationBtn">現在地を取得</button>
+    <button id="cancelLocationBtn">位置情報の取得をキャンセル</button>
+    <div id="legend"></div>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/geotiff"></script>
+    <script>
+        const KUMAGAYA_STATION = [36.1406, 139.3881];
+        const map = L.map('map', {
+            tap: true,
+            tapTolerance: 15
+        }).setView(KUMAGAYA_STATION, 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+
+        const geoTiffUrl = 'https://raw.githubusercontent.com/masimama/kumagaya_temp/main/071415_10mesh.tif';
+        let temperatureData;
+        let watchId = null;
+
+        async function loadGeoTIFF() {
+            document.getElementById('loading').style.display = 'block';
+            try {
+                const response = await fetch(geoTiffUrl);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const arrayBuffer = await response.arrayBuffer();
+                const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
+                const image = await tiff.getImage();
+                const bbox = image.getBoundingBox();
+                const rasters = await image.readRasters();
+                const temperatures = rasters[0];
+
+                temperatureData = {
+                    bbox,
+                    temperatures,
+                    width: image.getWidth(),
+                    height: image.getHeight()
+                };
+
+                await displayTemperatureMap();
+            } catch (error) {
+                console.error('Error loading GeoTIFF:', error);
+                alert(`温度データの読み込みに失敗しました: ${error.message}`);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        async function displayTemperatureMap() {
+            const { bbox, temperatures, width, height } = temperatureData;
+            const canvas = document.createElement('canvas');
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.createImageData(width, height);
+            const rgba = imageData.data;
+
+            const minTemp = Math.min(...temperatures);
+            const maxTemp = Math.max(...temperatures);
+
+            const chunkSize = 10000;
+            const totalChunks = Math.ceil(temperatures.length / chunkSize);
+
+            for (let chunk = 0; chunk < totalChunks; chunk++) {
+                const start = chunk * chunkSize;
+                const end = Math.min((chunk + 1) * chunkSize, temperatures.length);
+
+                for (let i = start; i < end; i++) {
+                    const temp = temperatures[i];
+                    const [r, g, b] = tempToColor(temp, minTemp, maxTemp);
+                    const index = i * 4;
+                    rgba[index] = r;
+                    rgba[index + 1] = g;
+                    rgba[index + 2] = b;
+                    // 色に応じて透明度を調整する
+                    const transparency = calculateTransparency(temp, minTemp, maxTemp);
+                    rgba[index + 3] = Math.round(transparency * 255);
+                }
+
+                document.getElementById('loadingProgress').value = ((chunk + 1) / totalChunks) * 100;
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+            L.imageOverlay(canvas.toDataURL(), [[bbox[1], bbox[0]], [bbox[3], bbox[2]]], { opacity: 0.7 }).addTo(map);
+            map.fitBounds([[bbox[1], bbox[0]], [bbox[3], bbox[2]]]);
+            addLegend(minTemp, maxTemp);
+        }
+
+        function tempToColor(temp, min, max) {
+            let r, g, b;
+            const range = max - min;
+
+            if (temp <= 20) {
+                // Cool Blue to Light Blue
+                const ratio = temp / 20;
+                r = Math.round(0 + ratio * 100);  // Adjusting towards lighter shade
+                g = Math.round(150 + ratio * 105);  // Adjusted for more contrast
+                b = Math.round(255 - ratio * 150);
+            } else if (temp <= 22) {
+                // Light Blue to Green
+                const ratio = (temp - 20) / 2;
+                r = Math.round(100 - ratio * 50);  // Adjusting towards darker shade
+                g = Math.round(255 - ratio * 105);
+                b = Math.round(0 + ratio * 100);
+            } else if (temp <= 24) {
+                // Green to Yellow
+                const ratio = (temp - 22) / 2;
+                r = Math.round(50 + ratio * 150);  // Adjusting towards lighter shade
+                g = Math.round(150 + ratio * 105);
+                b = Math.round(0);
+            } else if (temp <= 26) {
+                // Yellow to Orange
+                const ratio = (temp - 24) / 2;
+                r = Math.round(200 + ratio * 55);  // Adjusting towards lighter shade
+                g = Math.round(200 - ratio * 60);
+                b = Math.round(0);
+            } else if (temp <= 28) {
+                // Orange to Light Red
+                const ratio = (temp - 26) / 2;
+                r = Math.round(255);  // Adjusting towards lighter shade
+                g = Math.round(140 - ratio * 140);
+                b = Math.round(0);
+            } else if (temp <= 30) {
+                // Light Red to Red
+                const ratio = (temp - 28) / 2;
+                r = Math.round(255);  // Adjusting towards lighter shade
+                g = Math.round(0);
+                b = Math.round(0);
+            } else {
+                // Red to Dark Red
+                const ratio = (temp - 30) / (max - 30);
+                r = Math.round(200 + ratio * 55);  // Adjusting towards darker shade
+                g = Math.round(0);
+                b = Math.round(0);
+            }
+
+            return [r, g, b];
+        }
+
+        function calculateTransparency(temp, min, max) {
+            const range = max - min;
+            const transparency = (temp - min) / range;
+            return transparency;
+        }
+
+        function addLegend(min, max) {
+            const legend = L.control({ position: 'bottomleft' });
+
+            legend.onAdd = function (map) {
+                const div = L.DomUtil.create('div', 'legend');
+                div.style.width = '200px';
+
+                // 0.1°Cごとの色と透明度の変化を表示
+                div.innerHTML += '<br><strong>気温</strong><br>';
+                for (let temp = min; temp <= max; temp += 0.1) {
+                    const [r, g, b] = tempToColor(temp, min, max);
+                    const transparency = calculateTransparency(temp, min, max);
+                    div.innerHTML += `<div style="background-color: rgba(${r},${g},${b},${transparency}); height: 10px; width: 10px; display: inline-block;"></div>`;
+                }
+                div.innerHTML += `<span style="float: left; color: rgb(${tempToColor(min, min, max).join(',')}">${min.toFixed(1)}°C</span><span style="float: right; color: rgb(${tempToColor(max, min, max).join(',')}">${max.toFixed(1)}°C</span>`;
+
+                // Overall temperature color bar
+        div.innerHTML += '<br><br><strong>全体の気温カラー</strong><br>';
+        div.innerHTML += '<div class="overall-legend-gradient" style="background: linear-gradient(to right, rgb(0, 0, 255), rgb(0, 255, 0), rgb(255, 255, 0), rgb(255, 0, 0), rgb(255, 0, 255), rgb(0, 0, 0)); height: 10px; width: 100%;"></div>';
+        div.innerHTML += `<span style="float: left;">~20°C</span><span style="float: right;">30°C~</span>`;
+
+                return div;
+            };
+
+            legend.addTo(map);
+        }
+
+        loadGeoTIFF();
+    </script>
+</body>
+</html>
