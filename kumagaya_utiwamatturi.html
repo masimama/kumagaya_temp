@@ -151,7 +151,7 @@
             addLegend(minTemp, maxTemp);
         }
 
-  function tempToColor(temp, min, max) {
+ function tempToColor(temp, min, max) {
     let r, g, b;
 
     if (temp <= 10) {
@@ -175,7 +175,7 @@
         // Red to Pink for <= 30°C
         const ratio = (temp - 25) / 5;
         r = 255;
-        g = Math.round(255 * (1 - ratio));
+        g = 0;
         b = Math.round(255 * ratio);
     } else if (temp <= 35) {
         // Pink to Bright Purple for <= 35°C
@@ -183,18 +183,22 @@
         r = 255;
         g = Math.round(255 * (1 - ratio));
         b = 255;
-    } else {
-        // Bright Purple for > 35°C
+    } else if (temp <= 40) {
+        // Bright Purple for <= 40°C
         r = 255;
         g = 0;
         b = 255;
+    } else {
+        // Dark Purple for > 40°C
+        r = 128;
+        g = 0;
+        b = 128;
     }
 
     return [r, g, b];
 }
 
-
-
+        
         function calculateTransparency(temp, min, max) {
             const range = max - min;
             const transparency = (temp - min) / range;
