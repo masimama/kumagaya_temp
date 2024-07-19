@@ -213,10 +213,10 @@
 
                 // 0.1°Cごとの色と透明度の変化を表示
                 div.innerHTML += '<strong>気温</strong><br>';
-                for (let temp = min; temp <= max; temp += 0.1) {
+                for (let temp = min; temp <= max; temp += 0.5) {
                     const [r, g, b] = tempToColor(temp, min, max);
                     const transparency = calculateTransparency(temp, min, max);
-                    div.innerHTML += `<div style="background-color: rgba(${r},${g},${b},${transparency}); height: 10px; width: 3px; display: inline-block;"></div>`;
+                    div.innerHTML += `<div style="background-color: rgba(${r},${g},${b},${transparency}); height: 10px; width: 1px; display: inline-block;"></div>`;
                 }
                 div.innerHTML += `<span style="float: left; color: rgb(${tempToColor(min, min, max).join(',')}">${min.toFixed(1)}°C</span><span style="float: right; color: rgb(${tempToColor(max, min, max).join(',')}">${max.toFixed(1)}°C</span><br>`;
 
