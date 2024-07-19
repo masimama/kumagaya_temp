@@ -151,7 +151,7 @@
             addLegend(minTemp, maxTemp);
         }
 
-        function tempToColor(temp, min, max) {
+    function tempToColor(temp, min, max) {
     let r, g, b;
 
     if (temp <= 10) {
@@ -172,26 +172,28 @@
         g = Math.round(255);
         b = 0;
     } else if (temp <= 30) {
-        // Red for <= 30°C
+        // Orange to Red for <= 30°C
         const ratio = (temp - 25) / 5;
         r = 255;
-        g = Math.round(255 - ratio * 255);
+        g = Math.round(200 - ratio * 200);
         b = 0;
     } else if (temp <= 35) {
-        // Purple for <= 35°C
+        // Red to Dark Red for <= 35°C
         const ratio = (temp - 30) / 5;
         r = 255;
         g = 0;
-        b = Math.round(0 + ratio * 255);
+        b = Math.round(0 + ratio * 0);
     } else {
-        // Black for > 35°C
-        r = 0;
+        // Dark Red to Black for > 35°C
+        const ratio = (temp - 35) / (max - 35);
+        r = Math.round(255 - ratio * 55);
         g = 0;
         b = 0;
     }
 
     return [r, g, b];
 }
+
 
 
         function calculateTransparency(temp, min, max) {
