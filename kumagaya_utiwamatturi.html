@@ -216,7 +216,7 @@
                 div.style.width = '200px';
 
                 // 0.1°Cごとの色と透明度の変化を表示
-                div.innerHTML += '<br><strong>気温</strong><br>';
+                div.innerHTML += '<strong>気温</strong><br>';
                 for (let temp = min; temp <= max; temp += 0.1) {
                     const [r, g, b] = tempToColor(temp, min, max);
                     const transparency = calculateTransparency(temp, min, max);
@@ -224,7 +224,8 @@
                 }
                 div.innerHTML += `<span style="float: left; color: rgb(${tempToColor(min, min, max).join(',')}">${min.toFixed(1)}°C</span><span style="float: right; color: rgb(${tempToColor(max, min, max).join(',')}">${max.toFixed(1)}°C</span>`;
 
-                
+                div.innerHTML += '<br><strong>2024年7月19日13時頃</strong><br>'
+
                 return div;
             };
 
