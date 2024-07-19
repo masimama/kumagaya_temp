@@ -162,38 +162,36 @@
     } else if (temp <= 20) {
         // Green for <= 20°C
         const ratio = (temp - 10) / 10;
-        r = Math.round(0 + ratio * 0);
-        g = Math.round(0 + ratio * 255);
-        b = Math.round(255 - ratio * 255);
+        r = 0;
+        g = Math.round(255 * ratio);
+        b = Math.round(255 * (1 - ratio));
     } else if (temp <= 25) {
-        // Yellow for <= 25°C
+        // Orange for <= 25°C
         const ratio = (temp - 20) / 5;
-        r = Math.round(0 + ratio * 255);
-        g = Math.round(255);
+        r = Math.round(255);
+        g = Math.round(165 + (90 * (1 - ratio)));
         b = 0;
     } else if (temp <= 30) {
-        // Orange to Red for <= 30°C
+        // Red for <= 30°C
         const ratio = (temp - 25) / 5;
         r = 255;
-        g = Math.round(200 - ratio * 200);
+        g = Math.round(165 * (1 - ratio));
         b = 0;
     } else if (temp <= 35) {
-        // Red to Dark Red for <= 35°C
+        // Purple for <= 35°C
         const ratio = (temp - 30) / 5;
-        r = 255;
+        r = Math.round(255 * (1 - ratio));
         g = 0;
-        b = Math.round(0 + ratio * 0);
+        b = Math.round(255 * ratio);
     } else {
-        // Dark Red to Black for > 35°C
-        const ratio = (temp - 35) / (max - 35);
-        r = Math.round(255 - ratio * 55);
+        // Black for > 35°C
+        r = 0;
         g = 0;
         b = 0;
     }
 
     return [r, g, b];
 }
-
 
 
         function calculateTransparency(temp, min, max) {
