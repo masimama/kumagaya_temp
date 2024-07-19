@@ -152,55 +152,47 @@
         }
 
         function tempToColor(temp, min, max) {
-            let r, g, b;
-            const range = max - min;
+    let r, g, b;
 
-            if (temp <= 15) {
-                // Cool Blue to Light Blue
-                const ratio = temp / 20;
-                r = Math.round(0 + ratio * 100);  // Adjusting towards lighter shade
-                g = Math.round(150 + ratio * 105);  // Adjusted for more contrast
-                b = Math.round(255 - ratio * 150);
-            } else if (temp <= 20) {
-                // Light Blue to Green
-                const ratio = (temp - 20) / 2;
-                r = Math.round(100 - ratio * 50);  // Adjusting towards darker shade
-                g = Math.round(255 - ratio * 105);
-                b = Math.round(0 + ratio * 100);
-            } else if (temp <= 24) {
-                // Green to Yellow
-                const ratio = (temp - 22) / 2;
-                r = Math.round(50 + ratio * 150);  // Adjusting towards lighter shade
-                g = Math.round(150 + ratio * 105);
-                b = Math.round(0);
-            } else if (temp <= 25) {
-                // Yellow to Orange
-                const ratio = (temp - 24) / 2;
-                r = Math.round(200 + ratio * 55);  // Adjusting towards lighter shade
-                g = Math.round(200 - ratio * 60);
-                b = Math.round(0);
-            } else if (temp <= 30) {
-                // Orange to Light Red
-                const ratio = (temp - 26) / 2;
-                r = Math.round(255);  // Adjusting towards lighter shade
-                g = Math.round(140 - ratio * 140);
-                b = Math.round(0);
-            } else if (temp <= 35) {
-                // Light Red to Red
-                const ratio = (temp - 28) / 2;
-                r = Math.round(255);  // Adjusting towards lighter shade
-                g = Math.round(0);
-                b = Math.round(0);
-            } else {
-                // Red to Dark Red
-                const ratio = (temp - 30) / (max - 30);
-                r = Math.round(200 + ratio * 55);  // Adjusting towards darker shade
-                g = Math.round(0);
-                b = Math.round(0);
-            }
+    if (temp <= 10) {
+        // Blue (cool) for <= 10°C
+        r = 0;
+        g = 0;
+        b = 255;
+    } else if (temp <= 20) {
+        // Green for <= 20°C
+        const ratio = (temp - 10) / 10;
+        r = Math.round(0 + ratio * 0);
+        g = Math.round(0 + ratio * 255);
+        b = Math.round(255 - ratio * 255);
+    } else if (temp <= 25) {
+        // Yellow for <= 25°C
+        const ratio = (temp - 20) / 5;
+        r = Math.round(0 + ratio * 255);
+        g = Math.round(255);
+        b = 0;
+    } else if (temp <= 30) {
+        // Red for <= 30°C
+        const ratio = (temp - 25) / 5;
+        r = 255;
+        g = Math.round(255 - ratio * 255);
+        b = 0;
+    } else if (temp <= 35) {
+        // Purple for <= 35°C
+        const ratio = (temp - 30) / 5;
+        r = 255;
+        g = 0;
+        b = Math.round(0 + ratio * 255);
+    } else {
+        // Black for > 35°C
+        r = 0;
+        g = 0;
+        b = 0;
+    }
 
-            return [r, g, b];
-        }
+    return [r, g, b];
+}
+
 
         function calculateTransparency(temp, min, max) {
             const range = max - min;
