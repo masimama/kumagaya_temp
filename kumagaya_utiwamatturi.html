@@ -224,11 +224,7 @@
                 }
                 div.innerHTML += `<span style="float: left; color: rgb(${tempToColor(min, min, max).join(',')}">${min.toFixed(1)}°C</span><span style="float: right; color: rgb(${tempToColor(max, min, max).join(',')}">${max.toFixed(1)}°C</span>`;
 
-                // Overall temperature color bar
-                div.innerHTML += '<br><br><strong>全体の気温カラー</strong><br>';
-                div.innerHTML += '<div class="overall-legend-gradient" style="background: linear-gradient(to right, rgb(0, 0, 255), rgb(0, 255, 0), rgb(255, 255, 0), rgb(255, 0, 0), rgb(255, 0, 255), rgb(0, 0, 0)); height: 10px; width: 100%;"></div>';
-                div.innerHTML += `<span style="float: left;">~20°C</span><span style="float: right;">30°C~</span>`;
-
+                
                 return div;
             };
 
@@ -302,6 +298,23 @@
 
             return temperatures[index];
         }
+
+        map.on('click', async function(e) {
+            const { lat, lng } = e.latlng;
+
+            if (locationMarker) {
+                map.removeLayer(locationMarker);
+            }
+
+            locationMarker = L.marker([lat, lng]).addTo(map);
+
+            const temperature = await getTemperatureAtLocation(lat, lng);
+            if (temperature !== null) {
+                locationMarker.bindPopup(`気温: ${temperature.toFixed(1)}°C`).openPopup();
+            } else {
+                locationMarker.bindPopup(`気温情報はありません`).openPopup();
+            }
+        });
 
         loadGeoTIFF();
     </script>
