@@ -155,13 +155,13 @@
             let r, g, b;
             const range = max - min;
 
-            if (temp <= 20) {
+            if (temp <= 15) {
                 // Cool Blue to Light Blue
                 const ratio = temp / 20;
                 r = Math.round(0 + ratio * 100);  // Adjusting towards lighter shade
                 g = Math.round(150 + ratio * 105);  // Adjusted for more contrast
                 b = Math.round(255 - ratio * 150);
-            } else if (temp <= 22) {
+            } else if (temp <= 20) {
                 // Light Blue to Green
                 const ratio = (temp - 20) / 2;
                 r = Math.round(100 - ratio * 50);  // Adjusting towards darker shade
@@ -173,19 +173,19 @@
                 r = Math.round(50 + ratio * 150);  // Adjusting towards lighter shade
                 g = Math.round(150 + ratio * 105);
                 b = Math.round(0);
-            } else if (temp <= 26) {
+            } else if (temp <= 25) {
                 // Yellow to Orange
                 const ratio = (temp - 24) / 2;
                 r = Math.round(200 + ratio * 55);  // Adjusting towards lighter shade
                 g = Math.round(200 - ratio * 60);
                 b = Math.round(0);
-            } else if (temp <= 28) {
+            } else if (temp <= 30) {
                 // Orange to Light Red
                 const ratio = (temp - 26) / 2;
                 r = Math.round(255);  // Adjusting towards lighter shade
                 g = Math.round(140 - ratio * 140);
                 b = Math.round(0);
-            } else if (temp <= 30) {
+            } else if (temp <= 35) {
                 // Light Red to Red
                 const ratio = (temp - 28) / 2;
                 r = Math.round(255);  // Adjusting towards lighter shade
