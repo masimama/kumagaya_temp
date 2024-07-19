@@ -76,7 +76,7 @@
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        const geoTiffUrl = 'https://raw.githubusercontent.com/masimama/kumagaya_temp/main/071415_10mesh.tif';
+        const geoTiffUrl = 'https://raw.githubusercontent.com/masimama/kumagaya_temp/main/202407191330_temp.tif';
         let temperatureData;
         let watchId = null;
         let locationMarker = null;
@@ -216,7 +216,7 @@
                 }
                 div.innerHTML += `<span style="float: left; color: rgb(${tempToColor(min, min, max).join(',')}">${min.toFixed(1)}°C</span><span style="float: right; color: rgb(${tempToColor(max, min, max).join(',')}">${max.toFixed(1)}°C</span>`;
 
-                div.innerHTML += '<br><strong>2024年7月19日13時頃</strong><br>'
+                div.innerHTML += '<br><strong>2024年7月19日13時30分頃</strong><br>'
 
                 return div;
             };
