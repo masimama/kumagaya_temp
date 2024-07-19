@@ -215,7 +215,7 @@
                     const transparency = calculateTransparency(temp, min, max);
                     div.innerHTML += `<div style="background-color: rgba(${r},${g},${b},${transparency}); height: 10px; width: 10px; display: inline-block;"></div>`;
                 }
-                div.innerHTML += `<span style="float: left; color: rgb(${tempToColor(min, min, max).join(',')}">${min.toFixed(1)}°C</span><span style="float: right; color: rgb(${tempToColor(max, min, max).join(',')}">${max.toFixed(1)}°C</span>`;
+                div.innerHTML += `<span style="float: left; color: rgb(${tempToColor(min, min, max).join(',')}">${min.toFixed(1)}°C</span><span style="float: right; color: rgb(${tempToColor(max, min, max).join(',')}">${max.toFixed(1)}°C</span><br>`;
 
                 div.innerHTML += '<br><strong>2024年7月19日13時30分頃</strong><br>'
 
