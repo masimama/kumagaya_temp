@@ -164,35 +164,34 @@
         const ratio = (temp - 10) / 10;
         r = 0;
         g = 255;
-        b = Math.round(255 * (1 - ratio));
+        b = 0;
     } else if (temp <= 25) {
         // Orange for <= 25°C
         const ratio = (temp - 20) / 5;
         r = 255;
-        g = Math.round(255 * (1 - ratio));
+        g = 165;
         b = 0;
     } else if (temp <= 30) {
-        // Red to Pink for <= 30°C
-        const ratio = (temp - 25) / 5;
+        // Red for <= 30°C
         r = 255;
         g = 0;
-        b = Math.round(255 * ratio);
+        b = 0;
     } else if (temp <= 35) {
-        // Pink to Bright Purple for <= 35°C
+        // Pink for <= 35°C
         const ratio = (temp - 30) / 5;
         r = 255;
-        g = Math.round(255 * (1 - ratio));
-        b = 255;
+        g = 0;
+        b = 128;
     } else if (temp <= 40) {
         // Bright Purple for <= 40°C
-        r = 255;
+        r = 128;
         g = 0;
         b = 255;
     } else {
         // Dark Purple for > 40°C
-        r = 128;
+        r = 75;
         g = 0;
-        b = 128;
+        b = 130;
     }
 
     return [r, g, b];
