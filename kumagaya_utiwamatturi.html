@@ -241,8 +241,8 @@
             div.innerHTML += `<div style="background-color: rgba(${r},${g},${b},${transparency}); height: 10px; width: 3px; display: inline-block;"></div>`;
         }
         div.innerHTML += `<span style="float: left; color: rgb(${tempToColor(minTemp, minTemp, maxTemp).join(',')})">${minTemp.toFixed(1)}°C</span>
-                          <span style="float: right; color: rgb(${tempToColor(maxTemp, minTemp, maxTemp).join(',')})">${maxTemp.toFixed(1)}°C</span>`;
-        div.innerHTML += '<br><strong>7月20日15時頃</strong><br>';
+                          <span style="float: right; color: rgb(${tempToColor(maxTemp, minTemp, maxTemp).join(',')})">${maxTemp.toFixed(1)}°C</span><br>`;
+        div.innerHTML += '<br><strong>7月20日15時頃</strong>';
         div.innerHTML += '<br>※グレーの影は5時間以上日陰の場所です。クールスポットとして利用してください。';
 
                           return div;
