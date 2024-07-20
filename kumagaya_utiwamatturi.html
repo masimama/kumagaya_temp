@@ -86,13 +86,25 @@
         let locationMarker = null;
 
         // KMLファイルを読み込み、マップに追加
-        function loadKML() {
+       // KMLファイルを読み込み、マップに追加
+       function loadKML() {
             omnivore.kml(kmlUrl)
                 .on('ready', function() {
                     const kmlLayer = this;
                     map.addLayer(kmlLayer);
                     const kmlBounds = kmlLayer.getBounds();
                     map.fitBounds(kmlBounds);
+
+                    // スタイルを変更する
+                    kmlLayer.eachLayer(function(layer) {
+                        if (layer.setStyle) {
+                            layer.setStyle({
+                                color: 'blak',
+                                weight: 2,
+                                opacity: 0.5
+                            });
+                        }
+                    });
 
                     if (temperatureData) {
                         clipKMLToTemperatureBounds(kmlLayer, temperatureData.bbox);
@@ -220,7 +232,7 @@
 
     legend.onAdd = function (map) {
         const div = L.DomUtil.create('div', 'legend');
-        div.style.width = '150px';
+        div.style.width = '200px';
 
         div.innerHTML += '<strong>気温</strong><br>';
         for (let temp = minTemp; temp <= maxTemp; temp += 0.2) {
@@ -230,6 +242,9 @@
         }
         div.innerHTML += `<span style="float: left; color: rgb(${tempToColor(minTemp, minTemp, maxTemp).join(',')})">${minTemp.toFixed(1)}°C</span>
                           <span style="float: right; color: rgb(${tempToColor(maxTemp, minTemp, maxTemp).join(',')})">${maxTemp.toFixed(1)}°C</span><br>`;
+        div.innerHTML += '<br><strong>7月20日14時30分</strong><br>';
+        div.innerHTML += '<br>※黒色の影は5時間以上日陰の場所<br>';
+
                           return div;
     };
 
@@ -237,68 +252,76 @@
 }
         
 
+let clickMarker; // クリックした場所のマーカー用変数
+
 function displayInfo(e) {
-            const latlng = map.mouseEventToLatLng(e.originalEvent);
-            const { bbox, temperatures, width, height } = temperatureData;
-            const x = Math.floor((latlng.lng - bbox[0]) / (bbox[2] - bbox[0]) * width);
-            const y = Math.floor((latlng.lat - bbox[1]) / (bbox[3] - bbox[1]) * height);
+    const latlng = map.mouseEventToLatLng(e.originalEvent);
+    const { bbox, temperatures, width, height } = temperatureData;
+    const x = Math.floor((latlng.lng - bbox[0]) / (bbox[2] - bbox[0]) * width);
+    const y = Math.floor((latlng.lat - bbox[1]) / (bbox[3] - bbox[1]) * height);
 
-            if (x >= 0 && x < width && y >= 0 && y < height) {
-                const index = y * width + x;
-                const temp = temperatures[index];
-                document.getElementById('info').innerText = `気温: ${temp.toFixed(1)}°C`;
-            }
+    if (x >= 0 && x < width && y >= 0 && y < height) {
+        const index = y * width + x;
+        const temp = temperatures[index];
+        document.getElementById('info').innerText = `気温: ${temp.toFixed(1)}°C`;
+
+        if (clickMarker) {
+            map.removeLayer(clickMarker); // 以前のマーカーを削除
         }
+        clickMarker = L.marker([latlng.lat, latlng.lng]).addTo(map)
+            .bindPopup(`気温: ${temp.toFixed(1)}°C`)
+            .openPopup();
+    }
+}
 
-        function handleLocationSuccess(position) {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            document.getElementById('info').innerText = `気温: ${temp.toFixed(1)}°C`;
+function handleLocationSuccess(position) {
+    const lat = position.coords.latitude;
+    const lng = position.coords.longitude;
 
-            if (locationMarker) {
-                map.removeLayer(locationMarker);
-            }
-            locationMarker = L.marker([lat, lng]).addTo(map)
-                .bindPopup(`現在地: (${lat.toFixed(4)}, ${lng.toFixed(4)})`)
-                .openPopup();
+    if (locationMarker) {
+        map.removeLayer(locationMarker);
+    }
+    locationMarker = L.marker([lat, lng]).addTo(map)
+        .bindPopup(`気温: ${temp.toFixed(1)}°C`)
+        .openPopup();
+}
+
+function handleLocationError() {
+    document.getElementById('info').innerText = '位置情報の取得に失敗しました。';
+}
+
+function startWatching() {
+    if (navigator.geolocation) {
+        if (watchId !== null) {
+            navigator.geolocation.clearWatch(watchId);
         }
+        watchId = navigator.geolocation.watchPosition(handleLocationSuccess, handleLocationError, {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 10000
+        });
+        document.getElementById('getLocationBtn').style.display = 'none';
+        document.getElementById('cancelLocationBtn').style.display = 'block';
+    } else {
+        alert('このブラウザでは位置情報サービスが利用できません。');
+    }
+}
 
-        function handleLocationError() {
-            document.getElementById('info').innerText = '位置情報の取得に失敗しました。';
-        }
+function stopWatching() {
+    if (watchId !== null) {
+        navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        document.getElementById('getLocationBtn').style.display = 'block';
+        document.getElementById('cancelLocationBtn').style.display = 'none';
+    }
+}
 
-        function startWatching() {
-            if (navigator.geolocation) {
-                if (watchId !== null) {
-                    navigator.geolocation.clearWatch(watchId);
-                }
-                watchId = navigator.geolocation.watchPosition(handleLocationSuccess, handleLocationError, {
-                    enableHighAccuracy: true,
-                    maximumAge: 0,
-                    timeout: 10000
-                });
-                document.getElementById('getLocationBtn').style.display = 'none';
-                document.getElementById('cancelLocationBtn').style.display = 'block';
-            } else {
-                alert('このブラウザでは位置情報サービスが利用できません。');
-            }
-        }
+document.getElementById('getLocationBtn').addEventListener('click', startWatching);
+document.getElementById('cancelLocationBtn').addEventListener('click', stopWatching);
+map.on('click', displayInfo);
 
-        function stopWatching() {
-            if (watchId !== null) {
-                navigator.geolocation.clearWatch(watchId);
-                watchId = null;
-                document.getElementById('getLocationBtn').style.display = 'block';
-                document.getElementById('cancelLocationBtn').style.display = 'none';
-            }
-        }
-
-        document.getElementById('getLocationBtn').addEventListener('click', startWatching);
-        document.getElementById('cancelLocationBtn').addEventListener('click', stopWatching);
-        map.on('click', displayInfo);
-
-        loadGeoTIFF();
-        loadKML();
-    </script>
+loadGeoTIFF();
+loadKML();
+</script>
 </body>
 </html>
