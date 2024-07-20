@@ -314,9 +314,9 @@ map.on('click', displayInfo);
             const temp = getTemperatureAt(lat, lng);
             const pixelValue = getTemperatureAtPixel(lat, lng);
             if (temp !== null) {
-                document.getElementById('info').innerHTML = `現在地: 緯度 ${lat.toFixed(5)}, 経度 ${lng.toFixed(5)}<br>気温: ${temp}°C<br>ピクセル値: ${pixelValue}`;
+                document.getElementById('info').innerHTML = `現在地: 緯度 ${lat.toFixed(5)}, 経度 ${lng.toFixed(5)}<br>気温: ${temp}°C`;
             } else {
-                document.getElementById('info').innerHTML = `現在地: 緯度 ${lat.toFixed(5)}, 経度 ${lng.toFixed(5)}<br>気温: データなし<br>ピクセル値: データなし`;
+                document.getElementById('info').innerHTML = `現在地: 緯度 ${lat.toFixed(5)}, 経度 ${lng.toFixed(5)}<br>気温: データなし`;
             }
         }
 
