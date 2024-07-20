@@ -245,6 +245,8 @@
         div.innerHTML += '<br><strong>7月20日15時頃</strong>';
         div.innerHTML += '<br>※グレーの影は5時間以上日陰の場所です。クールスポットとして利用してください。';
 
+        div.innerHTML += '<br><br>©立正大学地球科学部環境システム学科後藤研究室';
+
                           return div;
     };
 
@@ -314,7 +316,7 @@ map.on('click', displayInfo);
             const temp = getTemperatureAt(lat, lng);
             const pixelValue = getTemperatureAtPixel(lat, lng);
             if (temp !== null) {
-                document.getElementById('info').innerHTML = `現在地: 緯度 ${lat.toFixed(5)}, 経度 ${lng.toFixed(5)}<br>気温: ${temp}°C`;
+                document.getElementById('info').innerHTML = `現在地: 緯度 ${lat.toFixed(5)}, 経度 ${lng.toFixed(5)}<br>気温: 気温: ${temp.toFixed(1)}°C°C`;
             } else {
                 document.getElementById('info').innerHTML = `現在地: 緯度 ${lat.toFixed(5)}, 経度 ${lng.toFixed(5)}<br>気温: データなし`;
             }
