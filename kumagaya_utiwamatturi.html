@@ -232,18 +232,18 @@
 
     legend.onAdd = function (map) {
         const div = L.DomUtil.create('div', 'legend');
-        div.style.width = '200px';
+        div.style.width = '170px';
 
         div.innerHTML += '<strong>気温</strong><br>';
-        for (let temp = minTemp; temp <= maxTemp; temp += 0.2) {
+        for (let temp = minTemp; temp <= maxTemp; temp += 0.1) {
             const [r, g, b] = tempToColor(temp, minTemp, maxTemp);
             const transparency = calculateTransparency(temp, minTemp, maxTemp);
             div.innerHTML += `<div style="background-color: rgba(${r},${g},${b},${transparency}); height: 10px; width: 3px; display: inline-block;"></div>`;
         }
         div.innerHTML += `<span style="float: left; color: rgb(${tempToColor(minTemp, minTemp, maxTemp).join(',')})">${minTemp.toFixed(1)}°C</span>
                           <span style="float: right; color: rgb(${tempToColor(maxTemp, minTemp, maxTemp).join(',')})">${maxTemp.toFixed(1)}°C</span><br>`;
-        div.innerHTML += '<br><strong>7月20日14時30分</strong><br>';
-        div.innerHTML += '<br>※グレーの影は5時間以上日陰の場所です。<br>クールスポットとして利用してください<br>';
+        div.innerHTML += '<br><strong>7月20日15時頃</strong><br>';
+        div.innerHTML += '<br>※グレーの影は5時間以上日陰の場所です。クールスポットとして利用してください。';
 
                           return div;
     };
@@ -252,7 +252,25 @@
 }
         
 
-let clickMarker; // クリックした場所のマーカー用変数
+function getTemperatureAt(lat, lng) {
+            const { bbox, width, height, temperatures } = temperatureData;
+            const [minLat, minLng, maxLat, maxLng] = bbox;
+            const x = Math.floor((lng - minLng) / (maxLng - minLng) * width);
+            const y = Math.floor((lat - minLat) / (maxLat - minLat) * height);
+            const index = y * width + x;
+            return temperatures[index] || null;
+        }
+
+        function getTemperatureAtPixel(lat, lng) {
+            const { bbox, width, height, temperatures } = temperatureData;
+            const [minLat, minLng, maxLat, maxLng] = bbox;
+            const x = Math.floor((lng - minLng) / (maxLng - minLng) * width);
+            const y = Math.floor((lat - minLat) / (maxLat - minLat) * height);
+            const index = y * width + x;
+            return temperatures[index] || null;
+        }
+
+        let clickMarker = null; // クリックした場所のマーカー用変数
 
 function displayInfo(e) {
     const latlng = map.mouseEventToLatLng(e.originalEvent);
@@ -274,54 +292,84 @@ function displayInfo(e) {
     }
 }
 
-function handleLocationSuccess(position) {
-    const lat = position.coords.latitude;
-    const lng = position.coords.longitude;
-
-    if (locationMarker) {
-        map.removeLayer(locationMarker);
-    }
-    locationMarker = L.marker([lat, lng]).addTo(map)
-        .bindPopup(`気温: ${temp.toFixed(1)}°C`)
-        .openPopup();
-}
-
-function handleLocationError() {
-    document.getElementById('info').innerText = '位置情報の取得に失敗しました。';
-}
-
-function startWatching() {
-    if (navigator.geolocation) {
-        if (watchId !== null) {
-            navigator.geolocation.clearWatch(watchId);
-        }
-        watchId = navigator.geolocation.watchPosition(handleLocationSuccess, handleLocationError, {
-            enableHighAccuracy: true,
-            maximumAge: 0,
-            timeout: 10000
-        });
-        document.getElementById('getLocationBtn').style.display = 'none';
-        document.getElementById('cancelLocationBtn').style.display = 'block';
-    } else {
-        alert('このブラウザでは位置情報サービスが利用できません。');
-    }
-}
-
-function stopWatching() {
-    if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
-        watchId = null;
-        document.getElementById('getLocationBtn').style.display = 'block';
-        document.getElementById('cancelLocationBtn').style.display = 'none';
-    }
-}
-
-document.getElementById('getLocationBtn').addEventListener('click', startWatching);
-document.getElementById('cancelLocationBtn').addEventListener('click', stopWatching);
+// マップがクリックされたときに displayInfo 関数を呼び出す
 map.on('click', displayInfo);
 
-loadGeoTIFF();
-loadKML();
-</script>
+        function showCurrentLocation(position) {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+
+            if (locationMarker) {
+                locationMarker.setLatLng([lat, lng]);
+            } else {
+                locationMarker = L.marker([lat, lng])
+                    .addTo(map)
+                    .bindPopup('現在地')
+                    .openPopup();
+            }
+
+            map.setView([lat, lng], 15);
+
+            // 現在地の気温表示
+            const temp = getTemperatureAt(lat, lng);
+            const pixelValue = getTemperatureAtPixel(lat, lng);
+            if (temp !== null) {
+                document.getElementById('info').innerHTML = `現在地: 緯度 ${lat.toFixed(5)}, 経度 ${lng.toFixed(5)}<br>気温: ${temp}°C<br>ピクセル値: ${pixelValue}`;
+            } else {
+                document.getElementById('info').innerHTML = `現在地: 緯度 ${lat.toFixed(5)}, 経度 ${lng.toFixed(5)}<br>気温: データなし<br>ピクセル値: データなし`;
+            }
+        }
+
+        function startWatching() {
+            if (navigator.geolocation) {
+                watchId = navigator.geolocation.watchPosition(showCurrentLocation, showError, { enableHighAccuracy: true });
+                document.getElementById('getLocationBtn').style.display = 'none';
+                document.getElementById('cancelLocationBtn').style.display = 'block';
+            } else {
+                alert('このブラウザは位置情報取得をサポートしていません。');
+            }
+        }
+
+        function stopWatching() {
+            if (watchId !== null) {
+                navigator.geolocation.clearWatch(watchId);
+                watchId = null;
+                if (locationMarker) {
+                    map.removeLayer(locationMarker);
+                    locationMarker = null;
+                }
+                document.getElementById('getLocationBtn').style.display = 'block';
+                document.getElementById('cancelLocationBtn').style.display = 'none';
+                document.getElementById('info').innerText = '位置情報の取得を停止しました。';
+            }
+        }
+
+        function showError(error) {
+            let errorMessage = '';
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage = 'ユーザーが位置情報の取得を拒否しました。';
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage = '位置情報が利用できません。';
+                    break;
+                case error.TIMEOUT:
+                    errorMessage = '位置情報の取得がタイムアウトしました。';
+                    break;
+                case error.UNKNOWN_ERROR:
+                    errorMessage = '不明なエラーが発生しました。';
+                    break;
+            }
+            document.getElementById('info').innerText = `エラー: ${errorMessage}`;
+        }
+
+        map.on('click', displayInfo);
+
+        document.getElementById('getLocationBtn').addEventListener('click', startWatching);
+        document.getElementById('cancelLocationBtn').addEventListener('click', stopWatching);
+
+        loadGeoTIFF();
+        loadKML();
+    </script>
 </body>
 </html>
